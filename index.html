@@ -268,11 +268,17 @@
         }
 
         /* Music control */
-        .music-control {
+        .music-control-container {
             position: fixed;
             bottom: 2rem;
             right: 2rem;
             z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .music-control {
             background: rgba(196, 30, 58, 0.3);
             backdrop-filter: blur(20px);
             border: 1px solid var(--rose-light);
@@ -285,11 +291,99 @@
             cursor: pointer;
             transition: all 0.3s ease;
             font-size: 1.5rem;
+            flex-shrink: 0;
         }
 
         .music-control:hover {
             transform: scale(1.1);
             background: rgba(196, 30, 58, 0.5);
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            background: rgba(196, 30, 58, 0.3);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--rose-light);
+            border-radius: 30px;
+            padding: 0.5rem 1rem;
+            opacity: 0;
+            transform: translateX(20px);
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        .music-control:hover, .volume-control, .volume-control.active {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
+        }
+
+        .volume.icon {
+            color: var(--rose-light);
+            font-size: 1.2rem;
+            min-width: 20px;
+        }
+
+        .volume-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 120px;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(to right,
+                var(--rose-light) 0%,
+                var(--rose-light) 70%,
+                rgba(196, 30, 58, 0.3) 70%,
+                rgba(196, 30, 58, 0.3) 100%);
+            outline: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .volume-slider:hover {
+            height: 8px;
+        }
+        
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--gold);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(255, 175, 55, 0.5);
+            transition: all 0.2s ease;
+        }
+
+        .volume-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 15px rgba(255, 175, 55, 0.8);
+        }
+
+        .volume-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--gold);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(255, 175, 55, 0.5);
+            transition: all 0.2s ease;
+        }
+
+        .volume-slider::-moz-range-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 15px rgba(255, 175, 55, 0.8);
+        }
+
+        .volume-porcentage {
+            color: var(--rose-pale);
+            font-size: 0.9rem;
+            min-width: 35px;
+            text-align: right;
+            font-family: Playfair Display, serif;
         }
 
         /* Animations */
@@ -936,10 +1030,15 @@
     </div>
 
     <!-- Music Control -->
-    <div class="music-control" id="music-control" title="Click para música">
-        🎵
+    <div class="music-control-container">
+        <div class="volume-control" id="volume-control">
+            <span class="volume-icon" id="volume-icon">🔊</span>
+            <input type="range" min="0" max="100" value="70" class="volume-slider" id="volume-slider">
+            <span class="volume-porcentage" id="volume-porcentage">70%</span>
+        <div class="music-control" id="music-control" title="Click para música">
+            🎵
+        </div>
     </div>
-
     <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
@@ -1158,18 +1257,100 @@
 
         // Music control
         const musicControl = document.getElementById('music-control');
+        const volumeSlider = document.getElementById('volume-slider');
+        const volumeIcon = document.getElementById('volume-icon');
+        const volumePorcentage = document.getElementById('volume-porcentage');
+        const volumeControl = document.querySelector('.volume-control');
+        
         let isPlaying = false;
         
         // You can add an audio element here if you want background music
         const audio = new Audio('Daft Punk - Something About Us (Official Audio).mp3');
+        audio.loop = true;
+        audio.volume = 0.7;
 
         musicControl.addEventListener('click', () => {
-            isPlaying = !isPlaying;
-            musicControl.textContent = isPlaying ? '🔇' : '🎵';
-            if (isPlaying) {
-                audio.play();
+            if (audio.src) {
+                isPlaying = !isPlaying;
+                musicControl.textContent = isPlaying ? '⏸️' : '🎵';
+                if (isPlaying) {
+                    audio.play().catch(err => { 
+                        console.error('Error al reproducir audio:', err);
+                        isPlaying = false;
+                        musicControl.textContent = '🎵';
+                    });
+                    volumeControl.classList.add('active');
+                } else {
+                    audio.pause();
+                }
             } else {
-                audio.pause();
+                alert('Si no hay música agrégala.');
+            }
+        });
+
+        volumeSlider.addEventListener('input', (e) => {
+            const volume = volumeSlider.value / 100;
+            audio.volume = volume;
+            volumePorcentage.textContent = `${volumeSlider.value}%`;
+
+            const percentage = volume;
+            volumeSlider.style.background = `linear-gradient(to right, 
+            var(--rose-light) 0%, 
+            var(--rose-light) ${percentage * 100}%, 
+            rgba(255, 107, 157, 0.3) ${percentage * 100}%, 
+            rgba(255, 107, 157, 0.3) 100%)`;
+            
+            if (volume === 0) {
+                volumeIcon.textContent = '🔇';
+            } else if (volume < 0.5) {
+                volumeIcon.textContent = '🔈';
+            } else {
+                volumeIcon.textContent = '🔊';
+            }
+        });
+
+        volumeIcon.addEventListener('click', () => {
+            if (audio.volume > 0) {
+                audio.dataset.previousVolume = audio.volume;
+                audio.volume = 0;
+                volumeSlider.value = 0;
+                volumePorcentage.textContent = '0%';
+                volumeIcon.textContent = '🔇';
+                volumeSlider.style.background = `linear-gradient(to right, 
+                    var(--rose-light) 0%, 
+                    var(--rose-light) 0%, 
+                    rgba(255, 107, 157, 0.3) 0%, 
+                    rgba(255, 107, 157, 0.3) 100%)`;
+            } else {
+                const previousVolume = audio.dataset.previousVolume || 0.7;
+                audio.volume = previousVolume;
+                const volumeValue = Math.round(previousVolume * 100);
+                volumeSlider.value = volumeValue;
+                volumePorcentage.textContent = volumeValue + '%';
+                volumeSlider.style.background = `linear-gradient(to right, 
+                    var(--rose-light) 0%, 
+                    var(--rose-light) ${volumeValue}%, 
+                    rgba(255, 107, 157, 0.3) ${volumeValue}%, 
+                    rgba(255, 107, 157, 0.3) 100%)`;
+                
+                if (volumeValue < 30) {
+                    volumeIcon.textContent = '🔈';
+                } else if (volumeValue < 70) {
+                    volumeIcon.textContent = '🔉';
+                } else {
+                    volumeIcon.textContent = '🔊';
+                }
+            
+            }
+        });
+
+        volumeControl.addEventListener('mouseenter', () => {
+            volumeControl.classList.add('active');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!musicControl.contains(e.target) && !volumeControl.contains(e.target)) {
+                volumeControl.classList.remove('active');
             }
         });
 
